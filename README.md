@@ -1,3 +1,69 @@
+# 🐶 EdadCaninaMVC · v3 (rama `v3-mvc`)
+
+La v3 hace lo mismo que la v2 (convierte la edad y valida la entrada) y añade un botón **Limpiar**. Lo que cambia es cómo está organizado el código: usa **DataBinding** y el patrón **MVC**. `applicationId` es `es.davante.edadcanina.mvc`, así que se puede instalar junto a la v2.
+
+| Pieza | Fichero | Qué hace |
+|---|---|---|
+| Modelo | `modelo/EdadCaninaModelo`, `modelo/Validacion` | Guarda el texto, la edad humana y la validación; valida, calcula y avisa (`BaseObservable`) |
+| Vista | `activity_main.xml`, `vista/AdaptadoresVista` | Se pinta a partir del modelo (`@{}`, `@={}`, `app:errorValidacion`) y manda los clics al controlador |
+| Controlador | `controlador/EdadCaninaControlador` | Un método por cada acción del usuario: le da una orden al modelo |
+| Activity | `MainActivity` | Crea las piezas, las conecta y guarda/restaura el estado al girar |
+
+Hay un commit por paso, etiquetado de `paso-1` a `paso-7`. Las pruebas JUnit están en `app/src/test` (23 pruebas: modelo, controlador y casos raros).
+
+## Reto elegido: «Casos raros»
+
+**Qué pasaba.** El modelo confiaba en `Integer.parseInt`, que es más permisivo de lo que parece:
+
+| Entrada | Antes | Ahora | Por qué |
+|---|---|---|---|
+| `05` | OK (35) | OK (35) | Un cero a la izquierda no cambia el número; rechazarlo no ayuda a nadie |
+| `+5` | OK (35) | `NO_NUMERO` | Un signo no es una cifra; una edad no lleva signo |
+| `-4` | `FUERA_DE_RANGO` | `NO_NUMERO` | "Debe estar entre 1 y 30" confunde: el problema es el signo, no el tamaño |
+| `3.5` | `NO_NUMERO` | `NO_NUMERO` | Solo enteros |
+| `99999999999` | `NO_NUMERO` | `FUERA_DE_RANGO` | Son cifras, pero el número es demasiado grande: el error correcto es el de rango |
+| `٥` (cinco árabe-índico) | OK (35) | `NO_NUMERO` | `parseInt` acepta cifras de otros alfabetos; nos quedamos con 0-9 |
+
+**Cómo lo he resuelto.** Primero escribí las pruebas (`CasosRarosTest`) y comprobé que cuatro fallaban. Después añadí una regla al modelo: antes de convertir, el texto (sin espacios) tiene que cumplir `[0-9]+`. Si no la cumple, es `NO_NUMERO`. Si son cifras pero `parseInt` falla, es porque el número no cabe en un `int`, así que es `FUERA_DE_RANGO`. El teclado numérico ya impide escribir muchos de estos casos, pero el modelo no debe fiarse de la vista: se puede pegar texto, y el layout puede cambiar. Solo ha habido que tocar el modelo, y la vista ha mostrado los mensajes nuevos sin cambiar nada.
+
+## Explícalo con mis palabras
+
+**1. ¿Qué diferencia hay entre `@{...}` y `@={...}`?**
+`@{...}` va en un solo sentido, del modelo a la vista: la vista lee el dato y se repinta cuando el modelo avisa. Lo uso para el resultado y para el error. `@={...}` es bidireccional: además, cuando el usuario cambia la vista, DataBinding llama al setter del modelo (`setEdadTexto`). Por eso solo tiene sentido en entradas como el `EditText`. Y por eso el setter comprueba si el valor ha cambiado de verdad: si no, el aviso volvería a escribir el texto en la vista y la vista volvería a llamar al setter, en un bucle.
+
+**2. ¿Qué ocurre, paso a paso, desde que pulsas Calcular hasta que aparece «42»?**
+1. Mientras escribo "6", el enlace `@={modelo.edadTexto}` ya ha llamado a `setEdadTexto("6")`. El modelo guarda el texto y avisa.
+2. Al pulsar Calcular, el `android:onClick="@{() -> controlador.onCalcularClick()}"` ejecuta la lambda.
+3. El controlador solo da la orden: `modelo.calcular()`.
+4. El modelo valida ("6" son cifras, está entre 1 y 30) y calcula 6 × 7 = 42. `setEdadHumana(42)` avisa con `notifyPropertyChanged(BR.edadHumana)` y `setValidacion(OK)` avisa con `BR.validacion`.
+5. El binding recibe los avisos y vuelve a evaluar las expresiones que dependen de esas propiedades: el texto `@string/tu_edad_format(modelo.edadHumana)` pasa a «… tendría 42 años», la visibilidad pasa a `VISIBLE` porque la validación es `OK`, y `app:errorValidacion` llama al adaptador, que quita el error.
+6. En pantalla aparece «42». Ni la Activity ni el controlador han tocado una vista.
+
+**3. ¿Qué cambiarías para que el factor fuera 6 en vez de 7, y por qué solo tocas un fichero?**
+Solo la constante `FACTOR_CANINO = 6` en `EdadCaninaModelo`. El factor es una regla de negocio y en MVC las reglas viven solo en el modelo: la vista muestra la `edadHumana` que le da el modelo sin saber cómo se ha calculado, el controlador solo dice "calcula" y la Activity solo conecta. Habría que cambiar también las pruebas que esperan 42, que es justo lo que se quiere: avisan de que la regla ha cambiado.
+
+## Respuestas a las preguntas «Piensa»
+
+- **Paso 1.** Todavía no aparece ninguna clase nueva: DataBinding genera las clases al compilar y solo para los layouts envueltos en `<layout>`, y aún no había ninguno.
+- **Paso 2.** Con `findViewById`, un id mal escrito se descubría en ejecución (`NullPointerException`). Con el binding, el campo no existe y el proyecto no compila: me entero antes.
+- **Paso 3.** No. El modelo devuelve una `Validacion`, no textos. Traducir la app es añadir `values-en/strings.xml`.
+- **Paso 4.** La cadena se corta en el `if (nuevo.equals(edadTexto)) return;`: cuando la vista reescribe el mismo texto y vuelve a llamar al setter, ya no hay aviso.
+- **Paso 5.** Porque decide cómo se ve algo: usa `getString` (texto según el idioma), `setError` y el foco. Todo eso es Android y presentación. Si estuviera en el modelo, el modelo dependería de Android y no se podría probar sin emulador.
+- **Paso 6.** Es una buena señal: el controlador solo traduce clics en órdenes. Si creciera, sería porque se le está colando trabajo de la vista o del modelo.
+- **Paso 7.** Sin guardar nada, al girar se perdía todo: la Activity nueva crea un modelo vacío y la vista se pinta con él. El modelo podría vivir fuera de la Activity, en un `ViewModel`, que sobrevive a los giros (MVVM).
+
+## Autoevaluación
+
+- [x] Hace lo mismo que la v2: calcula, valida los cuatro casos de error y no se cierra con ninguna entrada.
+- [x] `MainActivity` solo crea las piezas, las conecta y guarda/restaura el estado.
+- [x] El modelo no importa nada de `android.*` (solo `androidx.databinding`) ni contiene textos para el usuario.
+- [x] El controlador no tiene referencias a vistas.
+- [x] La vista usa `@={}` en la entrada, `@{}` en el resultado y un atributo propio para el error.
+- [x] Al girar la pantalla no se pierde nada.
+- [x] Al menos 5 pruebas JUnit en verde (hay 23).
+- [x] Los comentarios explican por qué se hace cada cosa.
+- [x] Un commit por paso.
+
 # 🐶 EdadCanina · v1
 
 Aplicación Android (Java) que calcula la edad "humana" de un perro multiplicando su edad por 7.
