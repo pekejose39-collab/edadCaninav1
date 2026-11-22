@@ -9,7 +9,9 @@ android {
     }
 
     defaultConfig {
-        applicationId = "es.davante.edadcanina"
+        // Paquete distinto al de la v2 para que las dos apps convivan en el emulador.
+        // El namespace (paquete de R, BR y las clases Binding) no cambia.
+        applicationId = "es.davante.edadcanina.mvc"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -24,6 +26,12 @@ android {
                 enable = false
             }
         }
+    }
+    // Activamos DataBinding: a partir de ahora el compilador generará una clase
+    // *Binding por cada layout envuelto en <layout> y la clase BR con las
+    // propiedades @Bindable. Se generan al compilar, por eso aún no aparece nada.
+    buildFeatures {
+        dataBinding = true
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
