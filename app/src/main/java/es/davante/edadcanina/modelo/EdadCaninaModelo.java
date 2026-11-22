@@ -1,11 +1,24 @@
 package es.davante.edadcanina.modelo;
 
+import androidx.databinding.BaseObservable;
+import androidx.databinding.Bindable;
+
+import java.util.Objects;
+
+import es.davante.edadcanina.BR;
+
 /**
- * Modelo de EdadCanina: guarda los datos y aplica las reglas (validar y calcular).
- * No importa nada de android.*: así se puede probar con JUnit sin emulador y no
- * hay que tocarlo si cambia la pantalla o el idioma.
+ * Modelo de EdadCanina: guarda los datos, aplica las reglas (validar y calcular)
+ * y avisa cuando algo cambia.
+ *
+ * Solo depende de androidx.databinding (no de android.*): así se puede probar con
+ * JUnit sin emulador y no hay que tocarlo si cambia la pantalla o el idioma.
+ *
+ * Hereda de BaseObservable para poder avisar a quien le escuche (el binding):
+ * el modelo no sabe qué vistas hay, solo dice "esta propiedad ha cambiado" y
+ * DataBinding repinta lo que dependa de ella.
  */
-public class EdadCaninaModelo {
+public class EdadCaninaModelo extends BaseObservable {
 
     // Reglas de negocio. Son públicas porque la vista necesita los límites para
     // construir el mensaje de error de rango (el número, no el texto).
@@ -18,30 +31,56 @@ public class EdadCaninaModelo {
     private int edadHumana = 0;
     private Validacion validacion = Validacion.SIN_CALCULAR;
 
+    // @Bindable en cada getter que lee la vista: genera BR.edadTexto, BR.edadHumana
+    // y BR.validacion, que son los identificadores con los que avisamos.
+    @Bindable
     public String getEdadTexto() {
         return edadTexto;
     }
 
+    @Bindable
     public int getEdadHumana() {
         return edadHumana;
     }
 
+    @Bindable
     public Validacion getValidacion() {
         return validacion;
     }
 
+    /**
+     * Lo llama la vista cada vez que el usuario escribe (enlace @={...}).
+     */
     public void setEdadTexto(String nuevo) {
         if (nuevo == null) nuevo = "";   // nunca guardamos null: evita NPE en calcular()
+        // Si no ha cambiado, no avisamos. Sin este if, el enlace bidireccional
+        // entraría en bucle: aviso → la vista reescribe el texto → la vista llama
+        // otra vez a este setter → aviso → ...
         if (nuevo.equals(edadTexto)) return;
         edadTexto = nuevo;
+        notifyPropertyChanged(BR.edadTexto);
         // Regla: si el texto cambia, el resultado anterior deja de valer.
-        // Va aquí (y no en la Activity) porque es una regla, no una forma de pintar.
         invalidarResultado();
+    }
+
+    // Setters privados: solo calcular() (y las demás operaciones del modelo)
+    // pueden cambiar el resultado. Nadie de fuera puede "inventarse" una edad.
+    private void setEdadHumana(int nueva) {
+        if (nueva == edadHumana) return;
+        edadHumana = nueva;
+        notifyPropertyChanged(BR.edadHumana);
+    }
+
+    private void setValidacion(Validacion nueva) {
+        if (Objects.equals(nueva, validacion)) return;
+        validacion = nueva;
+        notifyPropertyChanged(BR.validacion);
     }
 
     /**
      * Valida el texto y, si es correcto, calcula la edad humana.
-     * Devuelve la Validacion para que quien llame decida qué mostrar.
+     * Devuelve la Validacion para que quien llame pueda decidir qué hacer,
+     * aunque la vista ya se entera sola gracias a los avisos.
      */
     public Validacion calcular() {
         String texto = edadTexto.trim();
@@ -64,21 +103,23 @@ public class EdadCaninaModelo {
             return error(Validacion.FUERA_DE_RANGO);
         }
 
-        edadHumana = edad * FACTOR_CANINO;
-        validacion = Validacion.OK;
+        // Primero la edad y después la validación: cuando la vista vea OK y haga
+        // visible el resultado, la edad ya será la correcta.
+        setEdadHumana(edad * FACTOR_CANINO);
+        setValidacion(Validacion.OK);
         return validacion;
     }
 
     // Un error borra cualquier resultado anterior: no queremos mostrar una edad
     // vieja junto a un mensaje de error nuevo.
     private Validacion error(Validacion tipo) {
-        edadHumana = 0;
-        validacion = tipo;
+        setEdadHumana(0);
+        setValidacion(tipo);
         return validacion;
     }
 
     private void invalidarResultado() {
-        edadHumana = 0;
-        validacion = Validacion.SIN_CALCULAR;
+        setEdadHumana(0);
+        setValidacion(Validacion.SIN_CALCULAR);
     }
 }

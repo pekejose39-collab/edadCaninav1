@@ -1,7 +1,14 @@
 package es.davante.edadcanina.modelo;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
+import androidx.databinding.Observable;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import es.davante.edadcanina.BR;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -88,4 +95,37 @@ public class EdadCaninaModeloTest {
         assertEquals("", modelo.getEdadTexto());
         assertEquals(Validacion.VACIO, modelo.calcular());
     }
-}
+    @Test
+    public void calcular_avisaDeEdadHumanaYValidacion() {
+        List<Integer> avisos = escucharAvisos();
+        modelo.setEdadTexto("6");
+        avisos.clear();               // solo nos interesan los avisos del cálculo
+
+        modelo.calcular();
+
+        assertTrue(avisos.contains(BR.edadHumana));
+        assertTrue(avisos.contains(BR.validacion));
+    }
+
+    @Test
+    public void mismoTexto_noAvisa() {
+        modelo.setEdadTexto("6");
+        List<Integer> avisos = escucharAvisos();
+
+        modelo.setEdadTexto("6");     // el viaje de vuelta del enlace @={...}
+
+        assertTrue("Si avisara habría un bucle con la vista", avisos.isEmpty());
+    }
+
+    // Registra un oyente como haría el binding y devuelve la lista de
+    // propiedades que el modelo va anunciando.
+    private List<Integer> escucharAvisos() {
+        List<Integer> avisos = new ArrayList<>();
+        modelo.addOnPropertyChangedCallback(new Observable.OnPropertyChangedCallback() {
+            @Override
+            public void onPropertyChanged(Observable sender, int propertyId) {
+                avisos.add(propertyId);
+            }
+        });
+        return avisos;
+    }}

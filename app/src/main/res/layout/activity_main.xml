@@ -6,6 +6,17 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- <data> declara con qué objetos Java se enlaza este layout. Los <import>
+         hacen falta para usar View.VISIBLE o Validacion.OK en las expresiones. -->
+    <data>
+        <import type="android.view.View" />
+        <import type="es.davante.edadcanina.modelo.Validacion" />
+
+        <variable
+            name="modelo"
+            type="es.davante.edadcanina.modelo.EdadCaninaModelo" />
+    </data>
+
     <androidx.appcompat.widget.LinearLayoutCompat
         android:id="@+id/main"
         android:layout_width="match_parent"
@@ -39,7 +50,8 @@
             android:textColor="@color/black"
             android:textSize="16sp" />
 
-        <!-- El id age_input se convierte en el campo binding.ageInput -->
+        <!-- @={...} es bidireccional: lo que escribe el usuario llega al modelo
+             (setEdadTexto) y si el modelo cambia el texto, el campo se actualiza. -->
         <EditText
             android:id="@+id/age_input"
             android:layout_width="match_parent"
@@ -50,15 +62,22 @@
             android:importantForAutofill="no"
             android:inputType="number"
             android:maxLength="2"
+            android:text="@={modelo.edadTexto}"
             android:textSize="48sp" />
 
+        <!-- @{...} va solo del modelo a la vista. El texto sale del recurso con
+             formato y solo se ve si la validación es OK. Uso INVISIBLE y no GONE
+             para que el resultado siga ocupando su hueco y los botones no salten
+             arriba y abajo al calcular. -->
         <TextView
             android:id="@+id/result_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center"
-            android:textSize="16sp" />
+            android:text="@{@string/tu_edad_format(modelo.edadHumana)}"
+            android:textSize="16sp"
+            android:visibility="@{modelo.validacion == Validacion.OK ? View.VISIBLE : View.INVISIBLE}" />
 
         <Button
             android:id="@+id/btn_calc"

@@ -12,7 +12,6 @@ import es.davante.edadcanina.modelo.Validacion;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Las constantes y las reglas ya no están aquí: se han ido al modelo.
     private ActivityMainBinding binding;
     private final EdadCaninaModelo modelo = new EdadCaninaModelo();
 
@@ -22,39 +21,34 @@ public class MainActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         binding = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
-        binding.btnCalc.setOnClickListener(view -> calcularEdad());
+        // Entregamos el modelo al binding (setModelo porque la <variable> se llama
+        // "modelo"). Desde aquí el XML lee el modelo y se repinta con sus avisos.
+        binding.setModelo(modelo);
+
+        // Ya no leemos el EditText: el texto llega solo al modelo por @={...}.
+        binding.btnCalc.setOnClickListener(view -> mostrarError(modelo.calcular()));
     }
 
-    // La Activity ya solo hace dos cosas: pasar el texto al modelo y pintar
-    // lo que el modelo responde. Validar y calcular es cosa del modelo.
-    private void calcularEdad() {
-        modelo.setEdadTexto(binding.ageInput.getText().toString());
-        Validacion resultado = modelo.calcular();
-
+    // De momento el error se sigue pintando a mano (en el paso 5 pasará al XML).
+    // El resultado ya no: lo pinta el XML cuando el modelo avisa.
+    private void mostrarError(Validacion resultado) {
+        String mensaje;
         switch (resultado) {
-            case OK:
-                binding.ageInput.setError(null);
-                binding.resultText.setText(
-                        getString(R.string.tu_edad_format, modelo.getEdadHumana()));
-                break;
             case VACIO:
-                mostrarError(getString(R.string.error_vacio));
+                mensaje = getString(R.string.error_vacio);
                 break;
             case NO_NUMERO:
-                mostrarError(getString(R.string.error_no_numero));
+                mensaje = getString(R.string.error_no_numero);
                 break;
             case FUERA_DE_RANGO:
-                mostrarError(getString(R.string.error_rango,
-                        EdadCaninaModelo.EDAD_MINIMA, EdadCaninaModelo.EDAD_MAXIMA));
+                mensaje = getString(R.string.error_rango,
+                        EdadCaninaModelo.EDAD_MINIMA, EdadCaninaModelo.EDAD_MAXIMA);
                 break;
             default:
+                mensaje = null; // OK o SIN_CALCULAR: no hay error
                 break;
         }
-    }
-
-    private void mostrarError(String mensaje) {
         binding.ageInput.setError(mensaje);
-        binding.ageInput.requestFocus();
-        binding.resultText.setText("");
+        if (mensaje != null) binding.ageInput.requestFocus();
     }
 }
