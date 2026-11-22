@@ -25,6 +25,8 @@ public class EdadCaninaModelo extends BaseObservable {
     public static final int FACTOR_CANINO = 7;
     public static final int EDAD_MINIMA = 1;
     public static final int EDAD_MAXIMA = 30; // ningún perro supera esta edad
+    // Una o más cifras ASCII; los ceros a la izquierda ("05") se aceptan.
+    private static final String SOLO_CIFRAS = "[0-9]+";
 
     // Estado: lo que ha escrito el usuario, el resultado y cómo fue la validación.
     private String edadTexto = "";
@@ -89,15 +91,22 @@ public class EdadCaninaModelo extends BaseObservable {
             return error(Validacion.VACIO);
         }
 
+        // Reto «Casos raros»: solo cifras 0-9. parseInt acepta "+5" y cifras de
+        // otros alfabetos, y "-4" daría un error de rango confuso, así que
+        // decidimos nosotros qué es un número antes de convertirlo.
+        if (!texto.matches(SOLO_CIFRAS)) {
+            return error(Validacion.NO_NUMERO);
+        }
+
         int edad;
         try {
             edad = Integer.parseInt(texto);
         } catch (NumberFormatException e) {
-            // parseInt es quien sabe si es un número: capturar la excepción evita
-            // que la app se cierre con entradas como "abc".
-            return error(Validacion.NO_NUMERO);
+            // Aquí ya sabemos que son cifras: si parseInt falla es porque el
+            // número no cabe en un int, así que el problema es el rango.
+            // Capturarlo evita que la app se cierre.
+            return error(Validacion.FUERA_DE_RANGO);
         }
-
         if (edad < EDAD_MINIMA || edad > EDAD_MAXIMA) {
             // Limitar a 30 también evita el desbordamiento de int al multiplicar.
             return error(Validacion.FUERA_DE_RANGO);
