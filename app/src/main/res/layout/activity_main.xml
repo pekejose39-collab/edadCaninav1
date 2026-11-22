@@ -51,7 +51,10 @@
             android:textSize="16sp" />
 
         <!-- @={...} es bidireccional: lo que escribe el usuario llega al modelo
-             (setEdadTexto) y si el modelo cambia el texto, el campo se actualiza. -->
+             (setEdadTexto) y si el modelo cambia el texto, el campo se actualiza.
+             app:errorValidacion es un atributo inventado: lo programa
+             AdaptadoresVista.mostrarErrorValidacion. Al escribir, el modelo pasa a
+             SIN_CALCULAR y el error desaparece solo. -->
         <EditText
             android:id="@+id/age_input"
             android:layout_width="match_parent"
@@ -63,7 +66,8 @@
             android:inputType="number"
             android:maxLength="2"
             android:text="@={modelo.edadTexto}"
-            android:textSize="48sp" />
+            android:textSize="48sp"
+            app:errorValidacion="@{modelo.validacion}" />
 
         <!-- @{...} va solo del modelo a la vista. El texto sale del recurso con
              formato y solo se ve si la validación es OK. Uso INVISIBLE y no GONE
