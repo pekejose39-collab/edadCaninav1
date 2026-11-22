@@ -15,6 +15,11 @@
         <variable
             name="modelo"
             type="es.davante.edadcanina.modelo.EdadCaninaModelo" />
+
+        <!-- Segunda variable: los clics van al controlador, no a la Activity. -->
+        <variable
+            name="controlador"
+            type="es.davante.edadcanina.controlador.EdadCaninaControlador" />
     </data>
 
     <androidx.appcompat.widget.LinearLayoutCompat
@@ -83,13 +88,36 @@
             android:textSize="16sp"
             android:visibility="@{modelo.validacion == Validacion.OK ? View.VISIBLE : View.INVISIBLE}" />
 
-        <Button
-            android:id="@+id/btn_calc"
+        <!-- Los dos botones en fila: orientación horizontal y layout_weight="1"
+             con width 0dp para que se repartan el ancho a partes iguales.
+             onClick con una lambda: se evalúa al pulsar y llama al controlador.
+             Si controlador fuera null, la lambda no haría nada (sin NPE). -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
-            android:text="@string/btn_calc"
-            android:textSize="22sp" />
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btn_calc"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:onClick="@{() -> controlador.onCalcularClick()}"
+                android:text="@string/btn_calc"
+                android:textSize="22sp" />
+
+            <Button
+                android:id="@+id/btn_limpiar"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:onClick="@{() -> controlador.onLimpiarClick()}"
+                android:text="@string/btn_limpiar"
+                android:textSize="22sp" />
+        </LinearLayout>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 </layout>

@@ -111,6 +111,16 @@ public class EdadCaninaModelo extends BaseObservable {
     }
 
     // Un error borra cualquier resultado anterior: no queremos mostrar una edad
+    /**
+     * Vuelve al estado inicial: sin texto, sin resultado y sin error.
+     * Es una operación del modelo porque decide qué significa "empezar de cero".
+     */
+    public void limpiar() {
+        setEdadTexto("");
+        // Hace falta aunque setEdadTexto ya invalide: si el texto ya estaba vacío
+        // (por ejemplo, tras el error VACIO) setEdadTexto no hace nada.
+        invalidarResultado();
+    }
     // vieja junto a un mensaje de error nuevo.
     private Validacion error(Validacion tipo) {
         setEdadHumana(0);
